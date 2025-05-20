@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retro Celebration Clock</title>
+  <style>
+    /* === Embedded style.css === */
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: #f5f5dc;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.5s, color 0.5s;
+    }
+    .dark-mode {
+      background-color: #111;
+      color: #f5f5dc;
+    }
+    .flicker {
+      animation: flickerEffect 0.3s;
+    }
+    @keyframes flickerEffect {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    #clock {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 5rem;
+      margin-top: 50px;
+      position: relative;
+    }
+    .flip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #000;
+      color: #fff;
+      width: 100px;
+      height: 80px;
+      border-radius: 8px;
+      margin: 0 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      position: relative;
+      font-weight: bold;
+    }
+    .flip span {
+      font-size: 3rem;
+      line-height: 80px;
+      animation: flipAnim 0.5s ease-in-out;
+    }
+    @keyframes flipAnim {
+      0% { transform: rotateX(0); }
+      50% { transform: rotateX(-90deg); }
+      100% { transform: rotateX(0); }
+    }
+    #clock::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 100px;
+      background: #444;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: -1;
+      border-radius: 10px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      border: none;
+      background: #333;
+      color: #fff;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #555;
+    }
+    #calendarGrid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+    #calendarGrid div {
+      padding: 10px;
+      background: #ccc;
+      text-align: center;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .dark-mode #calendarGrid div {
+      background: #222;
+      color: #f5f5dc;
+    }
+    #todoItems li {
+      margin: 5px 0;
+      padding: 8px;
+      background: #ddd;
+      border-radius: 4px;
+      list-style: none;
+    }
+    .dark-mode #todoItems li {
+      background: #333;
+      color: #f5f5dc;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      text-align: center;
+      border-radius: 10px;
+      position: relative;
+      animation: popup 0.3s ease-out;
+    }
+    .modal-content img {
+      width: 100px;
+      margin-top: 10px;
+    }
+    .close {
+      position: absolute;
+      top: 5px; right: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    @keyframes popup {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="clock">
+    <div class="flip"><span id="hour">--</span></div>
+    <div class="flip"><span id="minute">--</span></div>
+    <div class="flip"><span id="ampm">--</span></div>
+  </div>
+  <button id="toggleMode">Toggle Dark Mode</button>
+  <hr>
+  <h2>Calendar</h2>
+  <div id="calendarGrid"></div>
+  <form id="eventForm">
+    <input type="text" id="eventTitle" placeholder="Event Title" required>
+    <input type="date" id="eventDate" required>
+    <input type="text" id="eventNote" placeholder="Event Note">
+    <button type="submit">Add Event</button>
+  </form>
+  <button id="exportBtn">Export Events</button>
+  <hr>
+  <h2>To-Do List</h2>
+  <form id="todoForm">
+    <input type="text" id="todoInput" placeholder="New Task" required>
+    <button type="submit">Add Task</button>
+  </form>
+  <ul id="todoItems"></ul>
+
+  <div class="modal" id="celebrationModal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 id="modalText"></h2>
+      <img id="modalGif" src="" alt="Celebration">
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti"></script>
+
+  <!-- App JS inline -->
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+
+      document.getElementById("hour").textContent = (hours % 12 || 12);
+      document.getElementById("minute").textContent = minutes.toString().padStart(2, '0');
+      document.getElementById("ampm").textContent = hours >= 12 ? "PM" : "AM";
+
+      new Audio("tick.mp3").play();
+    }
+    setInterval(updateClock, 60000);
+    updateClock();
+
+    document.getElementById("toggleMode").addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      document.body.classList.add("flicker");
+      setTimeout(() => document.body.classList.remove("flicker"), 300);
+    });
+
+    function generateCalendar() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const calendarGrid = document.getElementById("calendarGrid");
+      calendarGrid.innerHTML = "";
+      for (let i = 1; i <= daysInMonth; i++) {
+        const day = document.createElement("div");
+        day.textContent = i;
+        day.dataset.day = i;
+        calendarGrid.appendChild(day);
+      }
+    }
+    generateCalendar();
+
+    const eventForm = document.getElementById("eventForm");
+    const modal = document.getElementById("celebrationModal");
+    const modalText = document.getElementById("modalText");
+    const modalGif = document.getElementById("modalGif");
+    const closeBtn = document.querySelector(".close");
+
+    let events = [];
+    closeBtn.onclick = () => modal.style.display = "none";
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+
+    eventForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("eventTitle").value;
+      const date = document.getElementById("eventDate").value;
+      const note = document.getElementById("eventNote").value;
+
+      events.push({ title, date, note });
+      new Audio("bell.mp3").play();
+
+      modalText.innerText = `Celebration: ${title}\n${note}`;
+      modalGif.src = "celebrate.gif";
+      modal.style.display = "flex";
+
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    });
+
+    document.getElementById("todoForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("todoInput");
+      const item = document.createElement("li");
+      item.textContent = input.value;
+      document.getElementById("todoItems").appendChild(item);
+      input.value = "";
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const doc = new jsPDF();
+      doc.text("Your Events:", 10, 10);
+      events.forEach((e, i) => {
+        doc.text(`${i + 1}. ${e.title} - ${e.date}\n${e.note}`, 10, 20 + i * 20);
+      });
+      doc.save("events.pdf");
+    });
+  </script>
+</body>
+  </html>
+  
